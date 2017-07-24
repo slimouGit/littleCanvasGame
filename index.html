@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ANI: Einsendeaufgabe</title>
+    <style>
+        #mainContainer{
+            position: absolute; 
+            top: 50px; 
+            left: 50px;
+        }
+        #result{
+            position: absolute;
+            z-index:5;
+            top: 50px; 
+            left: 50px;
+            font-family: sans-serif;
+            color:white;
+            font-size:3em;
+        }
+        #haha{
+            position: absolute;
+            z-index:5;
+            top: 200px; 
+            left: 250px;
+            font-family: sans-serif;
+            color:white;
+            font-size:3em;
+            transform: rotate(-15deg);
+        }
+        button{
+            width: 49.5%;
+            height: 50px;
+            font-size:1.5em;
+            background-color:#c9dbfe;
+            border:0px;
+        }
+    </style>
+    <script type="text/javascript">
+        window.addEventListener('load', canvasApp, false);
+
+        function canvasApp() {
+            if (!document.createElement('canvas').getContext) {
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+
+            var theCanvas = document.getElementById('canvas');
+            var context = theCanvas.getContext('2d');
+            
+            //-------------------------------------------------------------------------
+                      
+            //EventListener fuer die Butons 
+            var ambossButton = document.getElementById("ambossDown");
+            ambossButton.addEventListener("click", shootAmbossDown);
+            ambossButton.disabled = false; 
+            
+            var neustartButton = document.getElementById("neuStart");
+            neustartButton.addEventListener("click", reload);
+            function reload() {location.reload();}
+
+            //-------------------------------------------------------------------------
+            
+            var angle = -45;                                    //Startwinkel
+            var gravity = .1;                                   //Schwerkraft
+            var groundY = theCanvas.height - 50;                //Höhe des Bodens
+            var startX = 50;                                    //x-Komponente der Startposition
+            var startY = groundY - 100;                         //y-Komponente der Startposition
+            var step = 3;                                       //Schrittgröße
+
+            //-------------------------------------------------------------------------
+            
+            //Amboss definieren
+            var ambossWidth = 78;
+            var ambossHeight = 50;
+            var ambossStartX = theCanvas.width/2 - ambossWidth;
+            var ambossStartY = 0;
+            var fehlVersuche = 1;
+            
+            //-------------------------------------------------------------------------
+            
+            //X-Position der vom Amboss getroffenen Kreatur
+            var creatuereOverPosition = theCanvas.height;
+
+            //-------------------------------------------------------------------------
+
+            //Eigenschaften des Characters
+            var character = {
+                x: startX,                                      //x-Position
+                y: startY,                                      //y-Position
+                vx: step * Math.cos(angle * Math.PI / 180),     //Geschwindigkeit in x-Richtung
+                vy: step * Math.sin(angle * Math.PI / 180),     //Geschwindigkeit in y-Richtung
+                elasticity: 0.95                                //Elastizität
+            };
+
+            //-------------------------------------------------------------------------
+
+            //Image-Objekte erstellen
+            var creatureImg = new Image();
+            var groundImg = new Image();
+            var ambossImg = new Image();
+            var deleteCreatureImg = new Image();
+            var creatureOverImg = new Image();
+
+            //Callback für Ladevorgang hinzufügen
+            creatureImg.addEventListener('load', onItemLoaded);
+            groundImg.addEventListener('load', onItemLoaded);
+            ambossImg.addEventListener('load', onItemLoaded);
+            deleteCreatureImg.addEventListener('load', onItemLoaded);
+            creatureOverImg.addEventListener('load', onItemLoaded);
+
+            //Anzahl der zu ladenen Bilder
+            var numImages = 5;
+
+            //Counter für Ladevorgang der Bilder, wird in onItemLoaded() hochgezählt
+            var imgLoadCount = 0;
+
+            //Bilder laden
+            creatureImg.src = "img/creature.png";
+            groundImg.src = "img/ground.png";
+            ambossImg.src = "img/amboss.png";
+            deleteCreatureImg.src = "img/deleteCreature.png";
+            creatureOverImg.src = "img/creatureOver.png";
+
+            //Variablen für Abmaße des Characters
+            var creatureWidth = 10;
+            var creatureHeight = 10;
+
+            //-------------------------------------------------------------------------
+
+            function drawCanvas() {
+                //Hintergrund
+                drawSky();
+                
+                //Schwerkraft
+                character.vy += gravity;
+
+                if (character.y + creatureHeight > groundY) {               //Aufprallen
+                    character.vy *= -1;
+                    character.vy *= character.elasticity;                   //Elastizität anwenden
+                    character.y = groundY - 10;                             //Position korrigieren
+                }
+
+                if (character.x + creatureWidth > theCanvas.width) {        //Aufrall am rechten Rand
+                    character.vx *= -1;
+                    character.x = theCanvas.width - creatureWidth;          //Position korrigieren
+                }else if(character.x + creatureWidth < 10){                 //Aufrall am linken Rand
+                    character.vx *= -1;
+                    character.x = 0;                                        //Position korrigieren
+                }
+
+                //Position aktualisieren
+                character.x += character.vx;
+                character.y += character.vy;
+
+                //Character zeichnen
+                drawCharacter();
+                
+                //Amboss zeichnen
+                drawAmboss();
+                
+                //getroffene Creatur zeichnen
+                creatureOver();
+                
+                //Boden zeichnen
+                drawGround();
+            }
+
+            //-------------------------------------------------------------------------
+
+            function drawCharacter() {
+
+                context.save();
+                context.translate(character.x, character.y);
+
+                //Bewegungsrichtung des Characters
+                var direction = character.vx / Math.abs(character.vx);
+                
+                //Ausrichtung des Characters über Skalierungstransformation
+                context.scale(direction, 1);
+
+                context.drawImage(creatureImg, 0,0);
+                
+                context.restore();
+            }
+            
+            //-------------------------------------------------------------------------
+
+            function drawAmboss() {
+                context.drawImage(ambossImg,ambossStartX,ambossStartY);
+            }
+            
+            //-------------------------------------------------------------------------
+            
+            /**
+             * der Amboss wird fallen gelassen
+             * es wird geprueft, ob die Kreatur sich an der X-Position (+-10) des Amboss befindet
+             * sobald er aufprallt
+             */ 
+            function shootAmbossDown(){
+                    var to = setTimeout(shootAmbossDown, 20);
+                    ambossStartY+=20;
+                    drawAmboss();
+                    if(ambossStartY>groundY-30){
+                        
+                        //relative Position der Kreatur zum Mittelpunkt der Canvas
+                        var positionCharacter = Math.floor(character.x)-ambossWidth/2;
+                        
+                        //Amboss trifft Kreatur
+                        if((ambossStartX-positionCharacter < 10)&&(ambossStartX-positionCharacter > -10)){
+                            creatureImg = deleteCreatureImg;        //das Bild der Kreatur wird durch ein transparentes ersetzt
+                            clearTimeout(to);
+                            creatureOvertoHeaven();
+                            
+                            //Ausgabe abhaengig von Anzahl der Versuche
+                            if(fehlVersuche==1){ausgabeVersuche=fehlVersuche + " Versuch"}
+                            else{ausgabeVersuche=fehlVersuche + " Versuche"}
+                            document.getElementById("result").innerHTML = ausgabeVersuche;
+                            //Meldung bei Treffer
+                            document.getElementById("haha").innerHTML = "\"Autsch\"";   
+                            //Button wird deaktiviert
+                            ambossButton.disabled = true; 
+                        }
+                        //Amboss verfehlt Kreatur
+                        else{
+                            document.getElementById("result").innerHTML = fehlVersuche;
+                            haha();
+                            function haha(){
+                                //Meldung bei Fehltreffer
+                                document.getElementById("haha").innerHTML = "\"Haa haa\"";
+                                //Meldung wird wieder entfernt
+                                setTimeout(deleteMessage, 2000);
+                                function deleteMessage(){
+                                    document.getElementById("haha").innerHTML = "";
+                                }
+                            }
+                            fehlVersuche++;
+                            clearTimeout(to);
+                            pullAmbossUp();
+                            function pullAmbossUp(){
+                            var to = setTimeout(pullAmbossUp, 20);
+                                if(ambossStartY>0){
+                                    ambossStartY-=5;
+                                }
+                                if(ambossStartY==0){
+                                    clearTimeout(to);
+                                    ambossStartY=0;
+                                }
+                            }
+                        }
+                    }
+                }
+            function creatureOver() {
+                context.drawImage(creatureOverImg,theCanvas.width/2-ambossWidth/2,creatuereOverPosition);
+            }
+            function creatureOvertoHeaven(){
+                setTimeout(creatureOvertoHeaven, 80);
+                    creatuereOverPosition-=5;
+                
+            };
+            //-------------------------------------------------------------------------
+
+            function drawSky(){
+                var gr = context.createLinearGradient(0, 0, 0, 300);
+                gr.addColorStop(0, 'rgb(0,39,126)');
+                gr.addColorStop(1, 'rgb(210,220,255)');
+                context.fillStyle = gr;
+                context.fillRect(0, 0, theCanvas.width, theCanvas.height);
+            }
+
+            //-------------------------------------------------------------------------
+
+            function drawGround() {
+                //Boden mit ground.png zeichnen
+                context.drawImage(groundImg, 0, groundY);
+            }
+
+            //-------------------------------------------------------------------------
+
+            function renderingLoop() {
+                requestAnimationFrame(renderingLoop);
+                drawCanvas();
+            }
+
+            //-------------------------------------------------------------------------
+
+            function onItemLoaded() {
+                imgLoadCount++;
+                if (imgLoadCount == numImages) {                //Bilder geladen
+                    console.log(numImages + " Bilder geladen");
+                    renderingLoop();
+                }
+            }
+
+            //-------------------------------------------------------------------------
+        }
+    </script>
+</head>
+<body>
+<div id="mainContainer">
+    <div id="result"></div>
+    <canvas id="canvas" width="500" height="330">
+        Your browser does not support the HTML 5 Canvas.
+    </canvas>
+    <div id="haha"></div>
+    <div id="buttonBox">
+        <button id="ambossDown">Amboss</button>
+        <button id="neuStart">Neustart</button>
+    </div>
+</div>
+</body>
+</html>
